@@ -1,0 +1,36 @@
+# Environment — never commit secrets
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# uv
+.uv/
+uv.lock
+
+# GCP / ADK deploy artifacts
+.adk/
+agent_engine_config.json
+terraform.tfstate*
+.terraform/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
