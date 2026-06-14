@@ -206,48 +206,47 @@ def altitude_adjuster(sea_level_pace: str, elevation_feet: int) -> dict:
 
 # ── TOOL 5: Weekly Plan Generator ────────────────────────────────────────────
 def weekly_plan_generator(goal_race: str, current_weekly_miles: float, weeks_to_race: int, fitness_level: str = "intermediate") -> dict:
-    """
-    Generates a 7-day training week snapshot following the 80/20 rule.
+    goal_key = "marathon" if "marathon" in goal_race.lower() and "half" not in goal_race.lower() else "half marathon"
 
-    Args:
-        goal_race: Target race distance e.g. 'marathon', 'half marathon'.
-        current_weekly_miles: Current average weekly mileage e.g. 45.0.
-        weeks_to_race: Number of weeks until race day e.g. 16.
-        fitness_level: Runner tier - 'beginner', 'intermediate', or 'advanced'. Default intermediate.
-
-    Returns:
-        dict with a full 7-day plan, mileage targets, and phase guidance.
-    """
     peak_targets = {
-        "marathon":      {"beginner": 40, "intermediate": 55, "advanced": 70},
+        "marathon": {"beginner": 40, "intermediate": 55, "advanced": 70},
         "half marathon": {"beginner": 30, "intermediate": 45, "advanced": 55},
+        "5k/10k": {"beginner": 30, "intermediate": 45, "advanced": 55},
     }
-    goal_key = "marathon" if "marathon" in goal_race.lower() else "half marathon"
-    level = fitness_level.lower() if fitness_level.lower() in ("beginner", "intermediate", "advanced") else "intermediate"
-    peak_miles = peak_targets.get(goal_key, peak_targets["marathon"])[level]
-    build_weeks = max(1, weeks_to_race - 3)
-    increment = max(0, (peak_miles - current_weekly_miles) / build_weeks)
-    this_week = round(min(current_weekly_miles + increment * (build_weeks / 2), peak_miles), 1)
 
-    plan = {
-        "monday":    {"type": "Rest or cross-train",       "miles": 0,                              "note": "Active recovery. Swim, bike, or yoga."},
-        "tuesday":   {"type": "Easy aerobic run",          "miles": round(this_week * 0.14, 1),     "note": "Zone 2. Conversational pace."},
-        "wednesday": {"type": "Tempo run",                 "miles": round(this_week * 0.16, 1),     "note": "2mi warmup + tempo miles + 2mi cooldown."},
-        "thursday":  {"type": "Easy aerobic run",          "miles": round(this_week * 0.12, 1),     "note": "Easy. Focus on cadence (~180 spm)."},
-        "friday":    {"type": "Strides or rest",           "miles": round(this_week * 0.08, 1),     "note": "4-6 x 20-sec strides at mile effort."},
-        "saturday":  {"type": "Track intervals",           "miles": round(this_week * 0.18, 1),     "note": "8 x 800m at 5K-10K effort, 90-sec jog recovery."},
-        "sunday":    {"type": "Long run",                  "miles": round(this_week * 0.32, 1),     "note": "Easy pace. Last 3-5 miles at goal marathon pace."},
-    }
+    level = fitness_level.lower() if fitness_level.lower() in ("beginner", "intermediate", "advanced") else "intermediate"
+    peak = peak_targets[goal_key][level]
+
+    weeks = []
+    for week in range(1, weeks_to_race + 1):
+        if week > weeks_to_race - 2:
+            miles = round(peak * (0.75 if week == weeks_to_race - 1 else 0.45), 1)
+            phase = "taper"
+        else:
+            progress = week / max(1, weeks_to_race - 2)
+            miles = round(min(current_weekly_miles + (peak - current_weekly_miles) * progress, peak), 1)
+            if week % 4 == 0:
+                miles = round(miles * 0.82, 1)
+                phase = "cutback"
+            else:
+                phase = "build"
+
+        weeks.append({
+            "week": week,
+            "phase": phase,
+            "target_miles": miles,
+            "key_workout": "Tempo / threshold workout",
+            "long_run": round(miles * 0.30, 1),
+            "notes": "Keep 80% easy. Add strides 1-2x/week."
+        })
+
     return {
         "goal_race": goal_race,
         "fitness_level": level,
         "weeks_to_race": weeks_to_race,
-        "this_week_target_miles": this_week,
-        "peak_mileage_target": peak_miles,
-        "taper_starts_week": weeks_to_race - 3,
-        "weekly_plan": plan,
-        "total_planned_miles": round(sum(v["miles"] for v in plan.values()), 1),
-        "principle": "80% easy (Zone 1-2), 20% quality (Zone 3-5). Never increase more than 10%/week.",
+        "peak_mileage_target": peak,
+        "plan": weeks,
+        "principle": "80% easy, 20% quality. Cutback every 4th week. Two-week taper."
     }
 
 
